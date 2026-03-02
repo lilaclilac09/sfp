@@ -1,26 +1,18 @@
-"""Replay with higher ratio — a simple but strong baseline.
-
-Optional module-level variables:
-    CONTRIBUTOR: str — your name or team (default: "anonymous")
-    SETUP: str — method setup key from methods.py (e.g. "sfp", "distill",
-        "hidden_distill", "orthogonal"). If set, the training loop calls
-        method_setup(SETUP, ...) and passes the resulting state as **kw
-        to your loss function. Omit for methods that need no setup.
-"""
+"""Mix new-task CE with memory replay CE at 0.1 ratio."""
 
 from torch import Tensor
 
 CONTRIBUTOR = "sfp team"
 
 
-def strong_replay_loss(
+def replay_loss(
     model,
     batch: dict,
     memory_batch: dict | None = None,
-    replay_ratio: float = 0.3,
+    replay_ratio: float = 0.1,
     **kw,
 ) -> Tensor:
-    """Like replay, but with a higher replay ratio (0.3 vs 0.1)."""
+    """Mix new-task CE with memory replay CE at given ratio."""
     out_new = model(
         input_ids=batch["input_ids"],
         attention_mask=batch["attention_mask"],
