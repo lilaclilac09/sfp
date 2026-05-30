@@ -127,10 +127,11 @@ def _run(method: str, memory: int, seed: int, steps: int, model_name: str, tasks
         "--steps_per_task", str(steps),
         "--lora_rank", "64",
         "--out_dir", out_dir,
-        # smoke preset (steps==50) → "smoke" eval mode (a few samples per task)
-        # so the smoke run actually takes ~5 min, not the 25+ min "fast" eval
-        # (200 samples) was producing. Other presets keep "fast".
-        "--mode", "smoke" if steps <= 50 else "fast",
+        # Use evaluate.py's "smoke" eval (few samples per task) for both smoke
+        # AND quick presets — on T4, Qwen-1.5B does ~11s/sample on GSM8K
+        # generation, so 200-sample "fast" eval makes quick take 5-7 hours
+        # instead of the documented ~10 min. "standard"/"full" still use fast.
+        "--mode", "smoke" if steps <= 200 else "fast",
         "--pushgateway", PUSHGATEWAY,
     ]
 
