@@ -235,9 +235,13 @@ def forgetting_curve_loss(
     with torch.no_grad():
         t_logits = teacher(input_ids=mem_ids, attention_mask=mem_mask).logits
 
-    # Qwen runs in bfloat16; upcast for stable softmax/log/KL over the large vocab.
-    t_logits = t_logits.float()
-    s_logits = out_mem.logits.float()
+    # Keep KL in bf16 to fit T4 memory. Earlier we upcast to fp32 for
+    # numerical fidelity on the per-example weights — but on Qwen2.5-1.5B
+    # (vocab ~151k) holding multiple [B,S,V] fp32 tensors at once OOMs a
+    # 14.5 GiB T4. The distill baseline runs the same KL in bf16 and works,
+    # so we match it. Trade-off: per-example forgetting differences are a
+    # bit coarser; on Qwen-scale logits, magnitude swamps quantization.
+    s_logits = out_mem.logits
 
     t_p = F.softmax(t_logits / temperature, dim=-1)
     s_logp = F.log_softmax(s_logits / temperature, dim=-1)
