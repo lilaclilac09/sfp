@@ -74,7 +74,11 @@ PRESETS = {
     },
     "standard": {
         "gpu": "A10G",
-        "seeds": [42, 43, 44],
+        # Reduced from [42, 43, 44] to [42] to fit a ~$27 self-serve budget on
+        # L40S (3 seeds × ~7h × $1.95 ≈ $40, 1 seed ≈ $14). Single-seed point
+        # estimate without variance bars, but real eval (200 samples × 5 tasks)
+        # so far less noisy than smoke. Paradigm's CI keeps all 3 seeds.
+        "seeds": [42],
         "steps_per_task": 2000,
         "model": "Qwen/Qwen2.5-1.5B-Instruct",
         "tasks": "math,code,ifeval,safety,domain",
