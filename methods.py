@@ -235,19 +235,23 @@ def forgetting_curve_loss(
     with torch.no_grad():
         t_logits = teacher(input_ids=mem_ids, attention_mask=mem_mask).logits
 
-    # Keep KL in bf16 to fit T4 memory. Earlier we upcast to fp32 for
-    # numerical fidelity on the per-example weights — but on Qwen2.5-1.5B
-    # (vocab ~151k) holding multiple [B,S,V] fp32 tensors at once OOMs a
-    # 14.5 GiB T4. The distill baseline runs the same KL in bf16 and works,
-    # so we match it. Trade-off: per-example forgetting differences are a
-    # bit coarser; on Qwen-scale logits, magnitude swamps quantization.
+    # Per-example KL, computed one batch index at a time to avoid holding
+    # multiple [B, S, V] tensors simultaneously. With Qwen2.5-1.5B (vocab
+    # ~151k) the naive expression t_p * (log t_p - s_logp) materialises
+    # ~5 [B,S,V] bf16 tensors at once (~3 GiB) which OOMs even on A10G with
+    # a teacher copy resident. Looping over batch costs 1/B the peak memory.
     s_logits = out_mem.logits
-
-    t_p = F.softmax(t_logits / temperature, dim=-1)
-    s_logp = F.log_softmax(s_logits / temperature, dim=-1)
-    kl_tok = (t_p * (t_p.clamp_min(1e-9).log() - s_logp)).sum(-1)
-    m = mem_mask.to(kl_tok.dtype)
-    kl_ex = (kl_tok * m).sum(1) / m.sum(1).clamp_min(1.0)
+    B = s_logits.shape[0]
+    m = mem_mask.to(s_logits.dtype)
+    kl_ex_list = []
+    for i in range(B):
+        t_pi = F.softmax(t_logits[i] / temperature, dim=-1)
+        s_lpi = F.log_softmax(s_logits[i] / temperature, dim=-1)
+        kl_tok_i = (t_pi * (t_pi.clamp_min(1e-9).log() - s_lpi)).sum(-1)  # [S]
+        mi = m[i]
+        kl_ex_list.append((kl_tok_i * mi).sum() / mi.sum().clamp_min(1.0))
+        del t_pi, s_lpi, kl_tok_i
+    kl_ex = torch.stack(kl_ex_list)  # [B]
 
     w = F.softmax(focus * kl_ex.detach(), dim=0)
     distill = (w * kl_ex).sum() * (temperature ** 2)

@@ -164,6 +164,10 @@ def _run(method: str, memory: int, seed: int, steps: int, model_name: str, tasks
         )
     env = dict(_os.environ)
     env["PYTHONPATH"] = f"{patch_dir}:{env.get('PYTHONPATH', '')}"
+    # Help PyTorch handle fragmented memory; matters when teacher + student
+    # of a 1.5B model + per-step softmax over a 151k vocab leave little
+    # headroom. Modal's own OOM message suggested this exact setting.
+    env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
     # Stream subprocess output directly to Modal App Logs (don't capture).
     # The previous capture_output=True hid all train.py progress until the
