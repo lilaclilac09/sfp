@@ -60,7 +60,10 @@ PRESETS = {
         "desc": "Sanity check. Tiny model, 1 seed, 50 steps. Just verifies your method runs.",
     },
     "quick": {
-        "gpu": "T4",
+        # A10G (24 GiB) instead of T4 (14.5 GiB) because distill-SETUP methods
+        # need to keep teacher + student of Qwen-1.5B in VRAM simultaneously
+        # — that's ~13.5 GiB before activations, OOMs a T4 on the first batch.
+        "gpu": "A10G",
         "seeds": [42],
         "steps_per_task": 200,
         "model": "Qwen/Qwen2.5-1.5B-Instruct",
