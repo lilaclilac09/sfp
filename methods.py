@@ -612,13 +612,16 @@ METHODS: dict[str, Callable] = {
     "distill": logit_distill_loss,
     "hidden_distill": hidden_distill_loss,
     "orthogonal": orthogonal_loss,
-    # forgetting_curve_dist comes first so leaderboard.yml's `head -1` detector
-    # picks it as the primary auto-run for this PR. The base + other variants
-    # follow and can be benchmarked manually or via subsequent PRs.
-    "forgetting_curve_dist": forgetting_curve_dist_loss,
-    "forgetting_curve": forgetting_curve_loss,
-    "forgetting_curve_sharp": forgetting_curve_sharp_loss,
+    # Reordered after local PK data (iter 8 in ITERATION.md):
+    # forgetting_curve_replay (alpha=0.5, beta=1.0) wins the local proxy
+    # -0.6*math_loss - 0.4*code_loss on three independent runs (leaky-eval,
+    # held-out math-only, held-out both axes). Placed first so
+    # leaderboard.yml's `head -1` detector picks it as the primary auto-run.
+    # Other variants registered as alternatives for follow-up PRs.
     "forgetting_curve_replay": forgetting_curve_replay_loss,
+    "forgetting_curve": forgetting_curve_loss,
+    "forgetting_curve_dist": forgetting_curve_dist_loss,
+    "forgetting_curve_sharp": forgetting_curve_sharp_loss,
     "forgetting_curve_soft": forgetting_curve_soft_loss,
     "sfp": sfp_loss,
     "sfp_grad": sfp_grad_loss,

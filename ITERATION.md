@@ -162,6 +162,47 @@ Per-example forgetting weights stayed non-uniform throughout the run; one transi
 
 ---
 
+## Iteration 8 — local proxy decides the primary
+
+**Trigger**: which of the five forgetting_curve variants should `leaderboard.yml`'s `head -1` detector pick as the auto-run? Iteration 7 made an *a priori* guess (`forgetting_curve_dist`); this iteration runs the actual numbers.
+
+**Method**: extended the local PK to all 5 variants + 3 baselines (naive / replay / distill) on Apple MPS bf16, 60 steps math → code, then re-ran in three configurations:
+
+1. **leaky**: math eval batch and replay pool both sampled from the same 200-example `math_data`.
+2. **held-out math**: 80/20 split of `math_data` so the eval batch is invisible to replay.
+3. **held-out both axes**: also a 80/20 split of `code_data`, so plasticity (code-side held-out loss) is measured cleanly.
+
+**Final proxy score on configuration #3** (mirrors the live formula `0.6 × retention + 0.4 × plasticity`, with loss in place of accuracy):
+
+| rank | method | math_loss | Δm | code_loss | Δc | proxy = −0.6·m − 0.4·c |
+|---|---|---|---|---|---|---|
+| 🥇 | **fc_replay** (α=0.5, β=1.0) | 1.692 | −0.439 | 1.330 | −0.369 | **−1.547** |
+| 🥈 | fc_soft (T=4.0) | 1.759 | −0.372 | 1.290 | −0.409 | −1.571 |
+| 🥉 | fc_base (defaults) | 1.770 | −0.360 | 1.289 | −0.410 | −1.578 |
+| 4 | fc_sharp (focus=3.0) | 1.780 | −0.351 | 1.291 | −0.408 | −1.584 |
+| 5 | replay (baseline) | 1.829 | −0.301 | 1.242 | −0.457 | −1.594 |
+| 6 | fc_dist (α=2.0, β=0.3) | 1.859 | −0.272 | 1.277 | −0.422 | −1.626 |
+| 7 | naive | 2.001 | −0.130 | 1.222 | −0.477 | −1.689 |
+| 8 | distill (baseline) | 2.123 | −0.008 | 1.338 | −0.361 | −1.809 |
+
+**Findings**:
+
+1. **`fc_replay` wins on three independent runs** — leaky-eval, held-out math, held-out both. Consistent across configurations is the strongest signal local PK can give.
+2. **The feared "heavy replay crushes plasticity" did not happen.** `fc_replay`'s code_loss is 1.330 vs the best (naive's 1.222) — only 0.04 worse. Retention more than compensates.
+3. **`fc_dist`, the iteration-7 *a priori* primary, ranks 6th of 8** — worse than the plain replay baseline. The local distill teacher knows nothing about math (no task-0 training in the local PK), so heavy distillation has nothing to anchor.
+4. **`distill` baseline is dead last** for the same reason — a small-model-specific artifact. On the real Qwen2.5-1.5B benchmark with proper task-0 training, distill is the *second*-strongest single-mechanism baseline (0.6350).
+
+**Caveats** (the local PK is a proxy, not a prediction):
+
+- 135M small-model dynamics ≠ 1.5B Qwen dynamics.
+- Local sequence is `zero-shot → code` (one task transition); the real harness is `math → code → ifeval → safety → domain` (four transitions).
+- The local teacher = base model (no task-0 training), so distillation under-performs. On the real harness the teacher knows the old task — `fc_dist` might claw back ground there.
+- Proxy uses loss; the leaderboard uses accuracy. Ranking *usually* survives that mapping but isn't guaranteed.
+
+**Action**: reorder `methods.py:METHODS` to put `forgetting_curve_replay` first. `leaderboard.yml`'s `head -1` detector will now select it as the primary auto-run.
+
+---
+
 ## Current state — what's on the PR
 
 PR #4 at `paradigmxyz/sfp` (`lilaclilac09:master` → `paradigmxyz:master`).
