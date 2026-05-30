@@ -104,12 +104,15 @@ def run_seed_t4(
     return _run(method, memory, seed, steps, model_name, tasks, code)
 
 
-@app.function(gpu="A10G", timeout=7200)
+@app.function(gpu="L40S", timeout=7200)
 def run_seed_a10g(
     method: str, memory: int, seed: int, steps: int, model_name: str, tasks: str,
     code: str = "",
 ) -> dict:
-    """Run benchmark on A10G."""
+    """Run benchmark on L40S (48 GiB). Name kept for compat — A10G's 22 GiB
+    is just barely too small for distill-SETUP methods on Qwen2.5-1.5B
+    (teacher + student + activations + per-example KL intermediates need
+    a hair over 22 GiB)."""
     return _run(method, memory, seed, steps, model_name, tasks, code)
 
 
