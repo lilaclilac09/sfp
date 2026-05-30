@@ -141,10 +141,30 @@ def _run(method: str, memory: int, seed: int, steps: int, model_name: str, tasks
             f.write(code)
         cmd.extend(["--method_file", method_file])
 
+    # Workaround for stale HF dataset revision pins in data.py (mbpp
+    # 12e9221 etc. now return 404 from the Hub). Write a sitecustomize.py
+    # that monkey-patches datasets.load_dataset to drop the revision kwarg,
+    # then put it on PYTHONPATH so Python auto-loads it before data.py
+    # imports datasets. No touch to data.py itself.
+    import os as _os
+    patch_dir = "/tmp/sfp_patches"
+    _os.makedirs(patch_dir, exist_ok=True)
+    with open(f"{patch_dir}/sitecustomize.py", "w") as _f:
+        _f.write(
+            "import datasets as _d\n"
+            "_o = _d.load_dataset\n"
+            "def _p(*a, **k):\n"
+            "    k.pop('revision', None)\n"
+            "    return _o(*a, **k)\n"
+            "_d.load_dataset = _p\n"
+        )
+    env = dict(_os.environ)
+    env["PYTHONPATH"] = f"{patch_dir}:{env.get('PYTHONPATH', '')}"
+
     # Stream subprocess output directly to Modal App Logs (don't capture).
     # The previous capture_output=True hid all train.py progress until the
     # subprocess finished, leaving Modal logs blank for the entire ~10 min run.
-    result = subprocess.run(cmd, cwd="/root/sfp")
+    result = subprocess.run(cmd, cwd="/root/sfp", env=env)
     if result.returncode != 0:
         raise RuntimeError(f"Training failed (seed={seed}, returncode={result.returncode}) — see Modal logs above for stderr.")
 
