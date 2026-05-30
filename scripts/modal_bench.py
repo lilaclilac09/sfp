@@ -127,7 +127,10 @@ def _run(method: str, memory: int, seed: int, steps: int, model_name: str, tasks
         "--steps_per_task", str(steps),
         "--lora_rank", "64",
         "--out_dir", out_dir,
-        "--mode", "fast",
+        # smoke preset (steps==50) → "smoke" eval mode (a few samples per task)
+        # so the smoke run actually takes ~5 min, not the 25+ min "fast" eval
+        # (200 samples) was producing. Other presets keep "fast".
+        "--mode", "smoke" if steps <= 50 else "fast",
         "--pushgateway", PUSHGATEWAY,
     ]
 
