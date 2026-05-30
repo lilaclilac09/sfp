@@ -253,6 +253,57 @@ def forgetting_curve_loss(
 forgetting_curve_loss.SETUP = "distill"
 
 
+def forgetting_curve_dist_loss(model, batch, memory_batch=None, teacher=None, **kw):
+    """forgetting_curve variant — alpha=2.0, beta=0.3. Doubles down on the
+    strongest single-mechanism baseline on the board (distill=0.6350 > replay=
+    0.5892), keeping the replay term light so plasticity isn't taxed.
+    """
+    return forgetting_curve_loss(
+        model, batch, memory_batch=memory_batch, teacher=teacher,
+        alpha=2.0, beta=0.3, **kw,
+    )
+
+forgetting_curve_dist_loss.SETUP = "distill"
+
+
+def forgetting_curve_replay_loss(model, batch, memory_batch=None, teacher=None, **kw):
+    """forgetting_curve variant — alpha=0.5, beta=1.0. Bet that hard-label
+    rehearsal carries retention more than softer distill on a 1.5B model.
+    """
+    return forgetting_curve_loss(
+        model, batch, memory_batch=memory_batch, teacher=teacher,
+        alpha=0.5, beta=1.0, **kw,
+    )
+
+forgetting_curve_replay_loss.SETUP = "distill"
+
+
+def forgetting_curve_sharp_loss(model, batch, memory_batch=None, teacher=None, **kw):
+    """forgetting_curve variant — focus=3.0. Sharpens the per-example forgetting
+    softmax so review concentrates harder on the most-drifted memory examples.
+    Leans into the unique mechanism nothing else on the board uses.
+    """
+    return forgetting_curve_loss(
+        model, batch, memory_batch=memory_batch, teacher=teacher,
+        focus=3.0, **kw,
+    )
+
+forgetting_curve_sharp_loss.SETUP = "distill"
+
+
+def forgetting_curve_soft_loss(model, batch, memory_batch=None, teacher=None, **kw):
+    """forgetting_curve variant — temperature=4.0. Softer distill target spreads
+    teacher knowledge across more classes per token; the T^2 scaling keeps the
+    distill term contribution roughly stable in magnitude.
+    """
+    return forgetting_curve_loss(
+        model, batch, memory_batch=memory_batch, teacher=teacher,
+        temperature=4.0, **kw,
+    )
+
+forgetting_curve_soft_loss.SETUP = "distill"
+
+
 # ---------------------------------------------------------------------------
 # SFP (our method)
 # ---------------------------------------------------------------------------
@@ -561,7 +612,14 @@ METHODS: dict[str, Callable] = {
     "distill": logit_distill_loss,
     "hidden_distill": hidden_distill_loss,
     "orthogonal": orthogonal_loss,
+    # forgetting_curve_dist comes first so leaderboard.yml's `head -1` detector
+    # picks it as the primary auto-run for this PR. The base + other variants
+    # follow and can be benchmarked manually or via subsequent PRs.
+    "forgetting_curve_dist": forgetting_curve_dist_loss,
     "forgetting_curve": forgetting_curve_loss,
+    "forgetting_curve_sharp": forgetting_curve_sharp_loss,
+    "forgetting_curve_replay": forgetting_curve_replay_loss,
+    "forgetting_curve_soft": forgetting_curve_soft_loss,
     "sfp": sfp_loss,
     "sfp_grad": sfp_grad_loss,
     "sfp_random_basis": sfp_random_basis_loss,
