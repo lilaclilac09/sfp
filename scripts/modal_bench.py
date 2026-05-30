@@ -39,9 +39,9 @@ image = (
     ])
 )
 
-app = modal.App("sfp-benchmark", image=image, secrets=[modal.Secret.from_name("sfp-push-token")])
+app = modal.App("sfp-benchmark", image=image)
 
-PUSHGATEWAY = "57.129.90.22:8080"
+PUSHGATEWAY = ""
 
 # ---------------------------------------------------------------------------
 # Presets: name -> (gpu, seeds, steps_per_task, model, tasks, est_cost)
