@@ -115,9 +115,41 @@ python3 submit.py submissions/forgetting_curve.py
 
 Use `DEVICE = "mps"` if on Apple Silicon — it's ~5× faster than CPU and avoids macOS jetsam killing the process under memory pressure.
 
-### 3.2 Reproducing on the real benchmark
+### 3.2 The two submission paths (read this — they're not equivalent)
 
-The official scoring is on Paradigm's Modal A10G via `scripts/modal_bench.py --preset standard`. The submission server (`sfp.paradigm.xyz:8090`) was offline when this submission was prepared; check for it to come back, or open a PR to `paradigmxyz/sfp` (PR #4 is the open one for this submission).
+There are **two** ways to get a score on the official leaderboard, and they have **different registration requirements**. Get this wrong and your method runs as `naive` (or not at all). The canonical guide is `dev/LEADERBOARD.md`; the harness code is the source of truth.
+
+**Path A — PR + `benchmark` label** (canonical per `dev/LEADERBOARD.md`):
+
+1. Fork the repo.
+2. **Edit `methods.py`** — add your loss function and register it in the `METHODS` dict.
+3. (If your method needs setup at task boundaries, add a case in `method_setup()`. `SETUP="distill"`, `"sfp"`, `"hidden_distill"`, `"orthogonal"` already have cases.)
+4. Open a PR.
+5. A maintainer adds the `benchmark` label.
+6. `.github/workflows/leaderboard.yml` does:
+   ```
+   git diff origin/master...HEAD -- methods.py | grep -oP '^\+\s*"(\w+)":\s' | head -1
+   ```
+   to detect the new method name, then runs `modal run scripts/modal_bench.py --method <name> --memory 128 --preset standard` and posts results to the PR.
+
+   **Critical**: that detector only looks at additions to `methods.py`'s `METHODS` dict. **A file dropped only into `submissions/` is invisible to this workflow** and the run falls back to `naive`.
+
+**Path B — `submit.py` to the live server** (the route `submissions/README.md` describes):
+
+1. Fork (optional — only needed if you also want the file on GitHub).
+2. Write your loss as `submissions/<name>.py` (single `*_loss` function, allowed imports only, ≤10 KB).
+3. Run `python3 submit.py submissions/<name>.py`. The CLI POSTs your code as a string to `http://sfp.paradigm.xyz:8090/submit`; the server validates it (`scripts/submit_server.py:validate_code`), writes it to a temp file, and runs `modal run scripts/modal_bench.py --method <name> --code <code> --memory 128 --preset standard`.
+4. Poll `/status/<id>` for ~45 min.
+
+The submission server was offline at the time of writing. **Path A is the working route right now**, which is why this submission has both: `methods.py` is registered (so the workflow detects it when labelled) **and** `submissions/forgetting_curve.py` is kept (so Path B works the instant the server returns).
+
+### 3.3 Gotchas worth knowing in advance
+
+- **`tests/test_smoke.py:test_method_registry` uses exact set equality** on `METHODS.keys()`. Adding a method requires extending that test's `expected` set in the same commit, otherwise CI (`.github/workflows/ci.yml`) goes red.
+- **CI lint scope** is `ruff check sfp/ tests/ tasks/ scripts/ *.py`. Top-level `methods.py` is in scope; `submissions/` is not. Your `methods.py` addition must pass `ruff check --target-version py312 --line-length 100`.
+- **`AGENTS.md` dtype rule**: Qwen loads as bfloat16. Any custom math over the vocab (softmax, log, KL) should upcast to fp32 to keep numerical fidelity — `forgetting_curve_loss` does this explicitly. Skipping the upcast doesn't crash, but it quantizes per-example differences and silently flattens any per-example weighting you compute.
+- **Pinned dataset revisions** in `data.py` (e.g. `mbpp` rev `12e9221`) have 404'd on the Hugging Face Hub. Local runs need to monkey-patch `datasets.load_dataset` to drop the `revision` kwarg (see `/tmp/pk.py`). Modal's harness may or may not hit the same issue depending on its dataset cache.
+- **Submit page rules vs harness reality**: the live submit page says "3 tasks, 1000 steps". The actual scoring preset (`standard` in `modal_bench.py`) runs **5 tasks, 2000 steps**. Write your loss to be config-agnostic.
 
 ---
 
