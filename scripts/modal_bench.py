@@ -118,7 +118,7 @@ def _run(method: str, memory: int, seed: int, steps: int, model_name: str, tasks
     out_dir = f"/root/sfp/out/bench/{method}_m{memory}_s{seed}"
 
     cmd = [
-        "python", "train.py",
+        "python", "-u", "train.py",  # -u: unbuffered stdout so progress streams to Modal logs
         "--method", method,
         "--memory", str(memory),
         "--seed", str(seed),
@@ -138,11 +138,12 @@ def _run(method: str, memory: int, seed: int, steps: int, model_name: str, tasks
             f.write(code)
         cmd.extend(["--method_file", method_file])
 
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd="/root/sfp")
-    print(result.stdout[-3000:] if len(result.stdout) > 3000 else result.stdout)
+    # Stream subprocess output directly to Modal App Logs (don't capture).
+    # The previous capture_output=True hid all train.py progress until the
+    # subprocess finished, leaving Modal logs blank for the entire ~10 min run.
+    result = subprocess.run(cmd, cwd="/root/sfp")
     if result.returncode != 0:
-        print("STDERR:", result.stderr[-3000:])
-        raise RuntimeError(f"Training failed (seed={seed}): {result.stderr[-500:]}")
+        raise RuntimeError(f"Training failed (seed={seed}, returncode={result.returncode}) — see Modal logs above for stderr.")
 
     results_path = f"{out_dir}/results.json"
     with open(results_path) as f:
