@@ -195,6 +195,64 @@ def orthogonal_loss(
 orthogonal_loss.SETUP = "orthogonal"
 
 
+def forgetting_curve_loss(
+    model,
+    batch: dict,
+    memory_batch: dict | None = None,
+    teacher=None,
+    temperature: float = 2.0,
+    alpha: float = 1.0,
+    beta: float = 0.5,
+    focus: float = 1.0,
+    **kw,
+) -> Tensor:
+    """DER++ + per-example forgetting-curve weighting on the distill term.
+
+    Replay CE on memory + dark-knowledge KL from a frozen task-boundary teacher,
+    with softmax-over-drift weights that concentrate preservation on memory
+    examples most at risk of being forgotten (spaced repetition / Ebbinghaus).
+    Submitted by lilaclilac09. ~35 lines.
+    """
+    out_new = model(
+        input_ids=batch["input_ids"],
+        attention_mask=batch["attention_mask"],
+        labels=batch["labels"],
+    )
+    loss = out_new.loss
+
+    if memory_batch is None:
+        return loss
+
+    mem_ids = memory_batch["input_ids"]
+    mem_mask = memory_batch["attention_mask"]
+
+    out_mem = model(input_ids=mem_ids, attention_mask=mem_mask, labels=memory_batch["labels"])
+    loss = loss + beta * out_mem.loss
+
+    if teacher is None:
+        return loss
+
+    with torch.no_grad():
+        t_logits = teacher(input_ids=mem_ids, attention_mask=mem_mask).logits
+
+    # Qwen runs in bfloat16; upcast for stable softmax/log/KL over the large vocab.
+    t_logits = t_logits.float()
+    s_logits = out_mem.logits.float()
+
+    t_p = F.softmax(t_logits / temperature, dim=-1)
+    s_logp = F.log_softmax(s_logits / temperature, dim=-1)
+    kl_tok = (t_p * (t_p.clamp_min(1e-9).log() - s_logp)).sum(-1)
+    m = mem_mask.to(kl_tok.dtype)
+    kl_ex = (kl_tok * m).sum(1) / m.sum(1).clamp_min(1.0)
+
+    w = F.softmax(focus * kl_ex.detach(), dim=0)
+    distill = (w * kl_ex).sum() * (temperature ** 2)
+
+    return loss + alpha * distill
+
+forgetting_curve_loss.SETUP = "distill"
+
+
 # ---------------------------------------------------------------------------
 # SFP (our method)
 # ---------------------------------------------------------------------------
@@ -503,6 +561,7 @@ METHODS: dict[str, Callable] = {
     "distill": logit_distill_loss,
     "hidden_distill": hidden_distill_loss,
     "orthogonal": orthogonal_loss,
+    "forgetting_curve": forgetting_curve_loss,
     "sfp": sfp_loss,
     "sfp_grad": sfp_grad_loss,
     "sfp_random_basis": sfp_random_basis_loss,
