@@ -208,7 +208,7 @@ The piece I'm actively working out: turning `spend_cap_usd` from a *usage* limit
 
 x402 revives the long-dormant HTTP **`402 Payment Required`** status code and turns it into an internet-native payment handshake: a server can demand payment for a request inline, the client pays, and the request completes — no accounts, no checkout page. It's stablecoin-native (USDC), charges zero protocol fees, and already settles on **Base and Solana**.
 
-### The negotiation (the *洽谈*)
+### The negotiation (协商握手)
 
 The handshake is exactly the part KeyShield needs:
 
