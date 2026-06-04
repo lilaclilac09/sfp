@@ -94,9 +94,9 @@ The honest version of this project: the hardest design decision wasn't the crypt
 
 My rule was simple: **put each language where it is strongest, and let the spec be the contract between them** so the seams don't leak.
 
-- **TypeScript — the surfaces humans touch.** The vault UI, the control-plane backend, and the browser extension all live in TS. This is where iteration speed and the web ecosystem matter most: WebAuthn, wallet signatures, and the DOM all have first-class TS stories, and I wanted the front door to feel instant to build and change.
+- **TypeScript — the surfaces humans touch.** The vault UI and the browser extension live in TS. This is where iteration speed and the web ecosystem matter most: WebAuthn, wallet signatures, and the DOM all have first-class TS stories, and I wanted the front door to feel instant to build and change.
 - **Rust — the one path that cannot be wrong.** The proxy is the only place a decrypted key exists in plaintext, and it's on the hot path for every single call. That is exactly where I wanted *no* garbage-collector pauses, *no* "it compiled but the type was wrong," and *no* surprise allocations. Rust's ownership model also means a decrypted key has a precise, visible lifetime — it's dropped the moment the upstream request ends, by construction.
-- **Python — meet the users where they live.** Almost everyone wiring an AI agent or a script is in Python. So the SDK/CLI is Python (`pip install keyshield`) and there's an MCP server for agents. Adoption beats elegance here: the easiest thing in the world should be `from keyshield import ...`.
+- **Python — the control plane and the user-facing SDK.** The control-plane router (auth, session minting, policy) is **FastAPI**, the SDK/CLI is Python (`pip install keyshield`), and there's an MCP server for agents. Almost everyone wiring an AI agent or a script is in Python, and the control plane is a cold path where ergonomics beat raw speed — so adoption wins: the easiest thing in the world should be `from keyshield import ...`.
 
 The thing I had to keep reminding myself: **the spec is what lets three languages cooperate.** As long as the token format, the encryption envelope, and the invariants are pinned in `SPEC.md`, it doesn't matter that the proxy is Rust and the SDK is Python — they're both implementing the *same* document.
 
@@ -129,6 +129,74 @@ There's a nuance worth being honest about, because it cuts the other way on raw 
 - **Rust uses fixed-width integers** (`u64`, `i128`, …) and forces me to pick the width and decide what happens on overflow (checked in debug builds, explicit `checked_add` / `saturating_add` in release). That feels like more work — but on a financial hot path enforcing spending caps, *being forced to think about overflow* is the feature, not the friction.
 
 So the trade I settled on: **Python where being wrong is cheap and iteration is king (the SDK); Rust where being wrong is expensive and the machine should refuse to let me be wrong (the proxy).** Spec-first development is what made that division safe — both sides answer to the same `SPEC.md`.
+
+---
+
+## Product & engineering decisions
+
+### Why FastAPI for the control-plane router
+
+The control plane — auth, session minting, policy — is the **cold path**: you mint a token now and then, you set a policy occasionally. The *hot* path (every API call) is the Rust proxy. Once I drew that line, FastAPI was the obvious router:
+
+- **It's async-native.** Starlette + uvicorn handle concurrent token mints and policy checks without blocking — exactly the I/O-bound shape of a control plane.
+- **Pydantic makes the spec into types.** The token payload from `SPEC.md` (scopes, spending cap, expiry, provider) becomes a Pydantic model, so request/response validation is free and the code mirrors the spec literally.
+- **Self-documenting.** Automatic OpenAPI/Swagger keeps `docs/API.md` honest — the API can't drift from its docs.
+- **One Python mental model.** The router, the SDK, and the MCP server are all Python, so everything agent-facing speaks the same language.
+- **Clean auth + limits.** Dependency injection and middleware make auth and rate-limiting first-class instead of bolted on.
+
+The summary: the control plane can *afford* Python because it isn't the hot path — and Python buys ergonomics there. The hot path doesn't get that luxury, which is why it's Rust.
+
+### Rate considerations — two performance regimes
+
+KeyShield deliberately runs **two different performance budgets**, split by path:
+
+- **Control plane (FastAPI):** low QPS, latency relaxed. Minting a token is rare, so Python overhead is unmeasurable here.
+- **Data plane (Rust proxy):** every single call, 50–80 ms target. This is where the rate work lives:
+  - **per-token rate + spending caps** enforced at the proxy,
+  - **single-flight dedup** collapses identical concurrent calls into one upstream hit,
+  - a **two-tier cache (memory + disk)** shields the upstream RPC,
+  - the token is verified on *every* request, but it's an in-memory payload check, so it's cheap.
+
+Because minting is occasional and calling is constant, the design spends its latency budget only where it's actually paid back.
+
+### Frontend considerations
+
+- The **vault UI must feel instant and visibly safe**: all encryption happens client-side, the server only ever sees ciphertext.
+- **The trust UX *is* the product.** The passkey / wallet prompt is the visible proof that the key is being sealed locally — that moment is what earns the user's trust.
+- The **extension intercepts at the moment of friction** — when you copy a key off a provider dashboard — instead of asking you to go somewhere else and paste it.
+- **Minimal new surface:** meet developers in the browser they're already in; don't make them learn another app.
+
+### Why an extension — and why I didn't build "an agent"
+
+The honest product call. The pain was never *"I need another agent."* The pain is the `.env` copy-paste loop and keys leaking into code, logs, and chat history — and that happens in the **browser and the editor**, not inside some agent.
+
+So the wedge is a **browser extension** that captures a key the instant it appears (OpenAI, Anthropic, Helius, …) in one tap. From there:
+
+- I deliberately chose **not** to ship a standalone agent product. The agent space is crowded, and an agent doesn't *solve* the credential problem — it's just another thing that needs keys.
+- Instead, KeyShield is the **credential layer that any agent plugs into.** The MCP server stays as an integration so agents *can* use the vault — but the product is the **vault + extension + proxy**, not an agent.
+- **Be the infrastructure, not the app on top of it.**
+
+### How passkeys actually work here
+
+Passkeys are what make the zero-knowledge model usable instead of a chore. KeyShield uses **WebAuthn, specifically the PRF extension**:
+
+1. Register a passkey (platform authenticator / device).
+2. To unlock, call WebAuthn `get()` with the `prf` extension and a fixed per-vault salt. The authenticator returns a **deterministic, per-credential 32-byte secret** that never leaves the device and is never sent to the server.
+3. That PRF output → **HKDF-SHA256** → 32-byte symmetric key → **AES-256-GCM** encrypts/decrypts the vault entry, entirely in the browser.
+
+Why this is the unlock: the key material is derived **on-device from the passkey**, there's no password to phish, and the server still only ever stores ciphertext. For crypto users there's an alternative path — sign a deterministic message with the **wallet**, run it through HKDF, and feed the same AES-256-GCM envelope.
+
+Pragmatics: PRF needs a supporting authenticator/browser, so the **wallet signature is the fallback**; salts are per-context, so different entries derive different keys.
+
+### How I designed the product
+
+The method, start to finish:
+
+1. **Start from the pain**, and design backward from one sentence: *"store a key once, plug in anywhere."*
+2. **Pin the trust model first** (spec-first): zero-knowledge + tokens-not-keys. The security model *is* the product promise.
+3. **Map three "10x"s to three components:** smoother → extension one-tap capture; more secure → client-side passkey/wallet encryption; faster → Rust proxy.
+4. **Pick a wedge, then build outward:** capture (extension) → store (vault) → use (proxy + tokens) → ecosystem (SDK + MCP).
+5. **Decide what *not* to build:** not an agent, not another password manager — a **credential layer for the AI-agent era**.
 
 ---
 

@@ -96,6 +96,10 @@ forks = {
         repo("mev-bundle-generator", "graph-based, trait-pluggable MEV bundle generator"),
         repo("renegade", "on-chain dark pool — MPC for anonymous midpoint crosses"),
     ],
+    "🛰️ Space & SpaceX": [
+        repo("ARK-Invest-Mach-33-SpaceX-Valuation-Model", "ARK Invest SpaceX valuation model excerpt"),
+        repo("space-engineering-skills", "design satellite & on-surface missions from concept to orbit — space-engineering skills for AI"),
+    ],
     "DeFi, Trading & Crypto data": [
         repo("porto", "authentication & payments on the web"),
         repo("cryo", "extract blockchain data to parquet / csv / json / dataframes"),
@@ -107,7 +111,6 @@ forks = {
         repo("TradingAgents_tauricresearch", "multi-agent LLM financial trading framework"),
         repo("tradingview-mcp", "AI-assisted TradingView chart analysis via MCP"),
         repo("unstock-signals", "Day1Global signals: US stock, macro, crypto"),
-        repo("ARK-Invest-Mach-33-SpaceX-Valuation-Model", "ARK Invest SpaceX valuation model excerpt"),
         repo("awesome-smart-contracts", "curated list of the best smart contracts"),
         repo("awesome-blockchain", "curated list of blockchain services and exchanges"),
         repo("full-blockchain-solidity-course-js", "full-stack Web3 + Solidity course (JS)"),
@@ -138,7 +141,6 @@ forks = {
         repo("k-dense-byok", "AI co-scientist powered by Claude Scientific Skills"),
         repo("lenny-skills", "86 product-management skills from Lenny's Podcast"),
         repo("gaslighting_ai_skills", "playful 'P8 engineer' AI skill"),
-        repo("space-engineering-skills", "space-engineering skills for AI"),
         repo("ui-ux-pro-max-skill", "design-intelligence skill for UI/UX"),
         repo("system-prompts-and-models-of-ai-tools", "collected system prompts of AI tools"),
         repo("repomix-code-to-llm-prompt", "pack a repo into a single AI-friendly file"),
@@ -225,10 +227,12 @@ out.append("---")
 out.append("")
 out.append("## 📌 Forks, References & Learning")
 out.append("")
-out.append("<sub>Projects I study, fork, and build on — grouped by theme.</sub>")
+out.append("<sub>Projects I study, fork, and build on — grouped by theme. My focus areas (Prop-AMM, MEV, Space) are expanded by default.</sub>")
 out.append("")
+priority = {"Solana & Prop-AMM ecosystem", "MEV & Flashbots", "🛰️ Space & SpaceX"}
 for section, repos in forks.items():
-    out.append("<details>")
+    open_attr = " open" if section in priority else ""
+    out.append(f"<details{open_attr}>")
     out.append(f"<summary><b>{section}</b> ({len(repos)})</summary>")
     out.append("")
     for r in repos:

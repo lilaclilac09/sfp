@@ -94,9 +94,9 @@
 
 ## 📌 Forks, References & Learning
 
-<sub>Projects I study, fork, and build on — grouped by theme.</sub>
+<sub>Projects I study, fork, and build on — grouped by theme. My focus areas (Prop-AMM, MEV, Space) are expanded by default.</sub>
 
-<details>
+<details open>
 <summary><b>Solana & Prop-AMM ecosystem</b> (20)</summary>
 
 - [kora](https://github.com/lilaclilac09/kora) — Solana relayer — lib + cli for gasless signing experiences
@@ -122,7 +122,7 @@
 
 </details>
 
-<details>
+<details open>
 <summary><b>MEV & Flashbots</b> (6)</summary>
 
 - [mev-flood](https://github.com/lilaclilac09/mev-flood) — simulates MEV activity from an array of unique searchers
@@ -134,8 +134,16 @@
 
 </details>
 
+<details open>
+<summary><b>🛰️ Space & SpaceX</b> (2)</summary>
+
+- [ARK-Invest-Mach-33-SpaceX-Valuation-Model](https://github.com/lilaclilac09/ARK-Invest-Mach-33-SpaceX-Valuation-Model) — ARK Invest SpaceX valuation model excerpt
+- [space-engineering-skills](https://github.com/lilaclilac09/space-engineering-skills) — design satellite & on-surface missions from concept to orbit — space-engineering skills for AI
+
+</details>
+
 <details>
-<summary><b>DeFi, Trading & Crypto data</b> (20)</summary>
+<summary><b>DeFi, Trading & Crypto data</b> (19)</summary>
 
 - [porto](https://github.com/lilaclilac09/porto) — authentication & payments on the web
 - [cryo](https://github.com/lilaclilac09/cryo) — extract blockchain data to parquet / csv / json / dataframes
@@ -147,7 +155,6 @@
 - [TradingAgents\_tauricresearch](https://github.com/lilaclilac09/TradingAgents_tauricresearch) — multi-agent LLM financial trading framework
 - [tradingview-mcp](https://github.com/lilaclilac09/tradingview-mcp) — AI-assisted TradingView chart analysis via MCP
 - [unstock-signals](https://github.com/lilaclilac09/unstock-signals) — Day1Global signals: US stock, macro, crypto
-- [ARK-Invest-Mach-33-SpaceX-Valuation-Model](https://github.com/lilaclilac09/ARK-Invest-Mach-33-SpaceX-Valuation-Model) — ARK Invest SpaceX valuation model excerpt
 - [awesome-smart-contracts](https://github.com/lilaclilac09/awesome-smart-contracts) — curated list of the best smart contracts
 - [awesome-blockchain](https://github.com/lilaclilac09/awesome-blockchain) — curated list of blockchain services and exchanges
 - [full-blockchain-solidity-course-js](https://github.com/lilaclilac09/full-blockchain-solidity-course-js) — full-stack Web3 + Solidity course (JS)
@@ -177,7 +184,7 @@
 </details>
 
 <details>
-<summary><b>AI agents & Claude skills</b> (14)</summary>
+<summary><b>AI agents & Claude skills</b> (13)</summary>
 
 - [hammock-skill--disciplined-agent](https://github.com/lilaclilac09/hammock-skill--disciplined-agent) — Hammock-driven development as a coding-agent skill
 - [agentic-wallet-skills](https://github.com/lilaclilac09/agentic-wallet-skills) — Coinbase agentic wallet skills
@@ -186,7 +193,6 @@
 - [k-dense-byok](https://github.com/lilaclilac09/k-dense-byok) — AI co-scientist powered by Claude Scientific Skills
 - [lenny-skills](https://github.com/lilaclilac09/lenny-skills) — 86 product-management skills from Lenny's Podcast
 - [gaslighting\_ai\_skills](https://github.com/lilaclilac09/gaslighting_ai_skills) — playful 'P8 engineer' AI skill
-- [space-engineering-skills](https://github.com/lilaclilac09/space-engineering-skills) — space-engineering skills for AI
 - [ui-ux-pro-max-skill](https://github.com/lilaclilac09/ui-ux-pro-max-skill) — design-intelligence skill for UI/UX
 - [system-prompts-and-models-of-ai-tools](https://github.com/lilaclilac09/system-prompts-and-models-of-ai-tools) — collected system prompts of AI tools
 - [repomix-code-to-llm-prompt](https://github.com/lilaclilac09/repomix-code-to-llm-prompt) — pack a repo into a single AI-friendly file
