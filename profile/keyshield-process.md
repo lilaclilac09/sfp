@@ -200,6 +200,39 @@ The method, start to finish:
 
 ---
 
+## The payment layer — x402 *(in design)*
+
+The piece I'm actively working out: turning `spend_cap_usd` from a *usage* limit into a *real-money* one. Today the spec's spending cap (`"spend_cap_usd": 10.00`) is enforced by the proxy against accumulated usage. The natural next step is to settle those costs as actual stablecoin payments per call — and **x402** is the protocol that makes that clean.
+
+### What x402 is
+
+x402 revives the long-dormant HTTP **`402 Payment Required`** status code and turns it into an internet-native payment handshake: a server can demand payment for a request inline, the client pays, and the request completes — no accounts, no checkout page. It's stablecoin-native (USDC), charges zero protocol fees, and already settles on **Base and Solana**.
+
+### The negotiation (the *洽谈*)
+
+The handshake is exactly the part KeyShield needs:
+
+1. The proxy makes a normal request to a paid upstream.
+2. The upstream replies **`402`** with an `accepts[]` array — the payment terms it will take (scheme, amount, network, asset, recipient).
+3. The proxy **picks terms within the token's `spend_cap_usd`**, signs a transfer authorization (on Solana), and retries the request with an **`X-PAYMENT`** header (base64-encoded payload).
+4. A **facilitator** verifies the signature and **settles on-chain**.
+5. The upstream returns **`200`** plus an **`X-PAYMENT-RESPONSE`** header carrying the settlement tx hash.
+
+That `accepts[]` ↔ `X-PAYMENT` exchange *is* the negotiation: the server advertises what it'll take, and the proxy chooses what it's allowed to pay.
+
+### Why it fits KeyShield exactly
+
+- **The cap becomes a budget.** Every settled x402 payment decrements `spend_cap_usd`. When it's exhausted, the proxy simply stops negotiating — the agent has a hard, autonomous spending ceiling, enforced at the one chokepoint that already verifies every request.
+- **The proxy is already the right place.** KeyShield's Rust proxy is the single point every call passes through. Speaking x402 there means agents pay per call without ever holding a wallet or a raw key — they hold a scoped token, and the proxy does the settlement.
+- **Two directions.** KeyShield can be an x402 **client** (paying upstreams on the agent's behalf) and, later, an x402 **resource server** (metering and charging for its own proxy).
+- **It lines up with the on-chain work.** The verified Solana payment-streaming mechanism is the settlement substrate; x402 is the request-time protocol that drives it.
+
+### Status
+
+This is **design, not shipped**: the spec today defines `spend_cap_usd` as a usage limit, and the x402 settlement path is what I'm specifying next — spec-first, same as everything else. The invariants don't change: raw keys never move, agents hold tokens not wallets, and revocation stays immediate.
+
+---
+
 ## What spec-first bought me
 
 - **A trust boundary I can point at.** Security claims live in one reviewable document, not scattered across commits.
