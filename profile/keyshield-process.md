@@ -11,7 +11,7 @@ KeyShield is *"iCloud Keychain for your API keys."* You store a key once, and fr
 KeyShield is not one app — it's six surfaces that all have to agree on the same security model:
 
 - a **browser vault UI** (TypeScript),
-- a **control-plane backend** (TypeScript),
+- a **control-plane router** (Python / FastAPI),
 - a **hot-path Rust proxy**,
 - a **browser extension**,
 - a **Python SDK / CLI**, and
