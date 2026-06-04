@@ -33,8 +33,7 @@ owned = {
     ],
     "🔐 Security & Reverse Engineering": [
         repo("re-agent", "RE agent: Binary Ninja bridge + Claude tool-calling loop for stateful binary analysis", "Python"),
-        repo("keyshield", "key management & sync worker", "TypeScript", "https://keyshield-sync-worker.vercel.app"),
-        repo("keyshield_font", "keyshield front-end", "TypeScript"),
+        repo("keyshield_font", "KeyShield front-end / vault UI", "TypeScript"),
         repo("hideaway", "experiments in secret hiding / obfuscation", "Rust"),
     ],
     "🧠 AI Agents & Automation": [
@@ -191,6 +190,25 @@ out.append('<p align="center">')
 out.append('  <a href="https://github.com/lilaclilac09?tab=repositories"><img src="https://img.shields.io/badge/repos-101-8957e5?style=flat-square" alt="repos"></a>')
 out.append('  <img src="https://img.shields.io/badge/focus-Solana%20%C2%B7%20MEV%20%C2%B7%20AI%20agents-14b8a6?style=flat-square" alt="focus">')
 out.append("</p>")
+out.append("")
+out.append("---")
+out.append("")
+out.append("## ⭐ Featured — KeyShield · *spec-driven*")
+out.append("")
+out.append('> **[keyshield](' + U + '/keyshield)** — *"iCloud Keychain for your API keys."*  '
+           "A zero-knowledge vault that stores your API keys as ciphertext, hands agents **scoped session tokens** "
+           "instead of raw keys, and accelerates calls through a Rust proxy.")
+out.append("")
+out.append("🔗 [Live site](https://keyshield-sync-worker.vercel.app) · "
+           "📄 [SPEC.md](" + U + "/keyshield/blob/main/SPEC.md) · "
+           "📝 [**Build process & spec-driven write-up →**](./keyshield-process.md)")
+out.append("")
+out.append("- 🔐 **Zero-knowledge** — AES-256-GCM encryption in the browser (WebAuthn PRF / wallet signature → HKDF-SHA256); the server only ever stores ciphertext and *cannot* decrypt at rest")
+out.append("- 🎫 **Scoped delegation** — agents receive `ksv2_…` session tokens with per-agent scopes, spending caps, and expiry; revocation is immediate (next request → `401`)")
+out.append("- ⚡ **Fast** — Rust reverse proxy with a two-tier cache (memory + disk) + single-flight dedup → **50–80 ms** hot path for Solana RPCs")
+out.append("- 🧩 **Spec-first** — `SPEC.md` (v0.1) pinned the protocol and invariants *before* code; the TypeScript vault, Rust proxy, Python SDK, MCP server, and Solana on-chain program all trace back to it")
+out.append("")
+out.append("<sub>Stack: `TypeScript` · `Rust` · `Python` · MCP · Solana</sub>")
 out.append("")
 out.append("---")
 out.append("")

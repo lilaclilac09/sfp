@@ -11,6 +11,21 @@
 
 ---
 
+## ⭐ Featured — KeyShield · *spec-driven*
+
+> **[keyshield](https://github.com/lilaclilac09/keyshield)** — *"iCloud Keychain for your API keys."*  A zero-knowledge vault that stores your API keys as ciphertext, hands agents **scoped session tokens** instead of raw keys, and accelerates calls through a Rust proxy.
+
+🔗 [Live site](https://keyshield-sync-worker.vercel.app) · 📄 [SPEC.md](https://github.com/lilaclilac09/keyshield/blob/main/SPEC.md) · 📝 [**Build process & spec-driven write-up →**](./keyshield-process.md)
+
+- 🔐 **Zero-knowledge** — AES-256-GCM encryption in the browser (WebAuthn PRF / wallet signature → HKDF-SHA256); the server only ever stores ciphertext and *cannot* decrypt at rest
+- 🎫 **Scoped delegation** — agents receive `ksv2_…` session tokens with per-agent scopes, spending caps, and expiry; revocation is immediate (next request → `401`)
+- ⚡ **Fast** — Rust reverse proxy with a two-tier cache (memory + disk) + single-flight dedup → **50–80 ms** hot path for Solana RPCs
+- 🧩 **Spec-first** — `SPEC.md` (v0.1) pinned the protocol and invariants *before* code; the TypeScript vault, Rust proxy, Python SDK, MCP server, and Solana on-chain program all trace back to it
+
+<sub>Stack: `TypeScript` · `Rust` · `Python` · MCP · Solana</sub>
+
+---
+
 ## 🛠️ My Projects
 
 ### 🌊 Solana Prop-AMM Research & Simulation
@@ -42,8 +57,7 @@
 ### 🔐 Security & Reverse Engineering
 
 - **[re-agent](https://github.com/lilaclilac09/re-agent)** — RE agent: Binary Ninja bridge + Claude tool-calling loop for stateful binary analysis `Python`
-- **[keyshield](https://github.com/lilaclilac09/keyshield)** — key management & sync worker · [site](https://keyshield-sync-worker.vercel.app) `TypeScript`
-- **[keyshield\_font](https://github.com/lilaclilac09/keyshield_font)** — keyshield front-end `TypeScript`
+- **[keyshield\_font](https://github.com/lilaclilac09/keyshield_font)** — KeyShield front-end / vault UI `TypeScript`
 - **[hideaway](https://github.com/lilaclilac09/hideaway)** — experiments in secret hiding / obfuscation `Rust`
 
 ### 🧠 AI Agents & Automation
