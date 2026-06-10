@@ -315,13 +315,15 @@ class SFPSystem(ContinualLearningSystem):
                 {"role": "user", "content": extra_user_suffix.strip()},
             ]
 
-        inputs = self._tokenizer.apply_chat_template(
+        encoded = self._tokenizer.apply_chat_template(
             messages,
             add_generation_prompt=True,
             return_tensors="pt",
-        ).to(self._model.device)
+            return_dict=True,
+        )
+        encoded = {k: v.to(self._model.device) for k, v in encoded.items()}
 
-        input_len = inputs.shape[1]
+        input_len = encoded["input_ids"].shape[1]
         gen_kwargs: dict[str, Any] = {
             "max_new_tokens": self.max_new_tokens,
             "pad_token_id": self._tokenizer.pad_token_id,
@@ -332,7 +334,7 @@ class SFPSystem(ContinualLearningSystem):
             gen_kwargs.update(do_sample=False)
 
         with torch.no_grad():
-            out = self._model.generate(inputs, **gen_kwargs)
+            out = self._model.generate(**encoded, **gen_kwargs)
 
         new_tokens = out[0][input_len:]
         text = self._tokenizer.decode(new_tokens, skip_special_tokens=True)
