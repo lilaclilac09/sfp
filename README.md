@@ -120,8 +120,6 @@ features.py         Activation hooks, PCA, gradient basis, importance ranking
 data.py             Dataset loading, memory buffers
 model.py            Model loading, LoRA configuration
 forget.py           Quick demo: observe forgetting (~5 min CPU)
-export.py           Merge an SFP LoRA adapter into a standalone HF model
-clbench/            Bridge to evaluate SFP checkpoints on CL-Bench (in-context gain)
 scripts/            Experiment scripts (h1_control.py, causal_test.py, modal_*.py)
 configs/            Experiment configs (demo, fast, full)
 tasks/              Per-task evaluation (math, code, ifeval, safety, domain)
